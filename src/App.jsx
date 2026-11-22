@@ -18,6 +18,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    setTab('myday') // never carry the previous person's screen over to the next login
     if (!session) { setMe(undefined); return }
     supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle()
       .then(({ data }) => setMe(data))
@@ -52,27 +53,30 @@ export default function App() {
     ['cover', 'Cover'],
     ...(me.role === 'admin' ? [['staff', 'Staff']] : []),
   ]
+  const allowed = tabs.map(([k]) => k).concat('alerts')
+  const shownTab = allowed.includes(tab) ? tab : 'myday'
   return (
     <>
       <header className="bar">
         <span className="brand">CareLoop</span>
         <nav className="tabs">
           {tabs.map(([k, label]) => (
-            <button key={k} className="tab" aria-current={tab === k ? 'page' : undefined}
+            <button key={k} className="tab" aria-current={shownTab === k ? 'page' : undefined}
               onClick={() => setTab(k)}>{label}</button>
           ))}
         </nav>
-        <Bell count={alerts.count} critical={alerts.critical} active={tab === 'alerts'} onClick={() => setTab('alerts')} />
+        <Bell count={alerts.count} critical={alerts.critical} active={shownTab === 'alerts'} onClick={() => setTab('alerts')} />
         <span className="who">{me.full_name} ({ROLE_LABEL[me.role]})</span>
         <button className="btn quiet" onClick={() => supabase.auth.signOut()}>Sign out</button>
       </header>
-      <main>{tab === 'myday' ? <MyDay me={me} />
-        : tab === 'residents' ? <Residents me={me} />
-        : tab === 'meds' ? <Meds me={me} />
-        : tab === 'alerts' ? <AlertsPage me={me} alerts={alerts} />
-        : tab === 'floor' ? <Floor me={me} alerts={alerts} />
-        : tab === 'cover' ? <Cover me={me} />
-        : <Staff me={me} />}</main>
+      <main>{shownTab === 'myday' ? <MyDay me={me} />
+        : shownTab === 'residents' ? <Residents me={me} />
+        : shownTab === 'meds' ? <Meds me={me} />
+        : shownTab === 'alerts' ? <AlertsPage me={me} alerts={alerts} />
+        : shownTab === 'floor' ? <Floor me={me} alerts={alerts} />
+        : shownTab === 'cover' ? <Cover me={me} />
+        : shownTab === 'staff' ? <Staff me={me} />
+        : <MyDay me={me} />}</main>
     </>
   )
 }
