@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { MyDay, Meds } from './Doses.jsx'
 
 const IDLE_MS = 15 * 60 * 1000 // auto-logout after 15 minutes of no activity
 const ROLE_LABEL = { admin: 'Admin', supervisor: 'Supervisor', caregiver: 'Caregiver' }
@@ -7,7 +8,7 @@ const ROLE_LABEL = { admin: 'Admin', supervisor: 'Supervisor', caregiver: 'Careg
 export default function App() {
   const [session, setSession] = useState(undefined) // undefined = still checking
   const [me, setMe] = useState(undefined)
-  const [tab, setTab] = useState('residents')
+  const [tab, setTab] = useState('myday')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -41,7 +42,7 @@ export default function App() {
     </main>
   )
 
-  const tabs = [['residents', 'Residents'], ...(me.role === 'admin' ? [['staff', 'Staff']] : [])]
+  const tabs = [['myday', 'My day'], ['residents', 'Residents'], ['meds', 'Medications'], ...(me.role === 'admin' ? [['staff', 'Staff']] : [])]
   return (
     <>
       <header className="bar">
@@ -55,7 +56,7 @@ export default function App() {
         <span className="who">{me.full_name} ({ROLE_LABEL[me.role]})</span>
         <button className="btn quiet" onClick={() => supabase.auth.signOut()}>Sign out</button>
       </header>
-      <main>{tab === 'residents' ? <Residents me={me} /> : <Staff me={me} />}</main>
+      <main>{tab === 'myday' ? <MyDay me={me} /> : tab === 'residents' ? <Residents me={me} /> : tab === 'meds' ? <Meds me={me} /> : <Staff me={me} />}</main>
     </>
   )
 }

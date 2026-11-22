@@ -1,0 +1,10 @@
+.timehead { font-size: 1.1rem; margin: 22px 0 8px; color: var(--muted); }
+.dose { display: grid; gap: 10px; }
+.dose .top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.dose .top strong { flex: 1 1 200px; }
+.chip { border: 1px solid currentColor; border-radius: 999px; padding: 2px 12px;
+  font-size: .9rem; font-weight: 700; color: var(--muted); }
+.chip[data-s='given'] { color: var(--accent); }
+.chip[data-s='refused'], .chip[data-s='missed'] { color: var(--danger); }
+.acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.note { color: var(--muted); margin: 0; font-size: .95rem; }
