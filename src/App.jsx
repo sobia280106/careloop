@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { MyDay, Meds } from './Doses.jsx'
+import { useAlerts, Bell, AlertsPage, Floor, Cover } from './Alerts.jsx'
 
 const IDLE_MS = 15 * 60 * 1000 // auto-logout after 15 minutes of no activity
 const ROLE_LABEL = { admin: 'Admin', supervisor: 'Supervisor', caregiver: 'Caregiver' }
@@ -31,6 +32,8 @@ export default function App() {
     return () => { clearTimeout(t); evs.forEach(e => window.removeEventListener(e, reset)) }
   }, [session])
 
+  const alerts = useAlerts(me) // must stay above the early returns below
+
   if (session === undefined) return <main><p className="sub">Loading…</p></main>
   if (!session) return <Login />
   if (me === undefined) return <main><p className="sub">Loading your account…</p></main>
@@ -42,7 +45,13 @@ export default function App() {
     </main>
   )
 
-  const tabs = [['myday', 'My day'], ['residents', 'Residents'], ['meds', 'Medications'], ...(me.role === 'admin' ? [['staff', 'Staff']] : [])]
+  const lead = me.role === 'admin' || me.role === 'supervisor'
+  const tabs = [
+    ['myday', 'My day'], ['residents', 'Residents'], ['meds', 'Medications'],
+    ...(lead ? [['floor', 'Floor']] : []),
+    ['cover', 'Cover'],
+    ...(me.role === 'admin' ? [['staff', 'Staff']] : []),
+  ]
   return (
     <>
       <header className="bar">
@@ -53,10 +62,17 @@ export default function App() {
               onClick={() => setTab(k)}>{label}</button>
           ))}
         </nav>
+        <Bell count={alerts.count} critical={alerts.critical} active={tab === 'alerts'} onClick={() => setTab('alerts')} />
         <span className="who">{me.full_name} ({ROLE_LABEL[me.role]})</span>
         <button className="btn quiet" onClick={() => supabase.auth.signOut()}>Sign out</button>
       </header>
-      <main>{tab === 'myday' ? <MyDay me={me} /> : tab === 'residents' ? <Residents me={me} /> : tab === 'meds' ? <Meds me={me} /> : <Staff me={me} />}</main>
+      <main>{tab === 'myday' ? <MyDay me={me} />
+        : tab === 'residents' ? <Residents me={me} />
+        : tab === 'meds' ? <Meds me={me} />
+        : tab === 'alerts' ? <AlertsPage me={me} alerts={alerts} />
+        : tab === 'floor' ? <Floor me={me} alerts={alerts} />
+        : tab === 'cover' ? <Cover me={me} />
+        : <Staff me={me} />}</main>
     </>
   )
 }
