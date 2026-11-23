@@ -1,0 +1,33 @@
+/* Vitals screens. Uses the app's theme variables so light and dark mode both work. */
+.vt-seg { display: flex; gap: 8px; margin: 0 0 20px; flex-wrap: wrap; }
+.vt-seg .btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+.card h2 { font-size: 1.15rem; margin: 0 0 12px; }
+.vt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 16px; margin-bottom: 10px; }
+.vt-lab { display: grid; gap: 4px; font-size: .9rem; color: var(--muted); margin-bottom: 10px; align-content: start; }
+.vt-lab input { width: 100%; }
+.vt-lab small { font-size: .8rem; color: var(--muted); }
+
+.vt-item { padding: 12px 0; border-top: 1px solid var(--line); }
+.vt-item:first-of-type { border-top: 0; }
+.vt-item.gone { opacity: .6; }
+.vt-item.gone .vt-val { text-decoration: line-through; }
+.vt-item .meta { color: var(--muted); margin: 4px 0 0; }
+.vt-head { display: flex; gap: 8px 14px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.vt-item .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+.vt-vals { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.vt-val { padding: 3px 10px; border-radius: 6px; font-size: .92rem; border: 1px solid var(--line); background: var(--bg); }
+.vt-val.warn { background: color-mix(in srgb, #e6a100 20%, var(--surface)); border-color: #e6a100; }
+.vt-val.crit { background: color-mix(in srgb, var(--danger) 18%, var(--surface)); border-color: var(--danger); font-weight: 700; }
+.tag.vt-warn { background: color-mix(in srgb, #e6a100 20%, var(--surface)); border: 1px solid #e6a100; color: var(--ink); }
+
+.vt-range { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+.vt-range:first-of-type { border-top: 0; }
+.vt-range > strong { flex: 0 0 12rem; }
+.vt-range .meta { color: var(--muted); }
+.vt-inputs { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.vt-inputs input { width: 6rem; }
+.vt-mini { display: grid; gap: 2px; font-size: .75rem; color: var(--muted); }
+
+.vt-floor .row { flex-wrap: wrap; }

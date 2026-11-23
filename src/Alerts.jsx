@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import './alerts.css'
+import { Chips } from './Vitals.jsx'
 
 const TZ = 'Asia/Kolkata' // matches facility_tz() in the database
 const fmt = ts => ts ? new Date(ts).toLocaleString('en-IN', { timeZone: TZ, day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false }) : ''
@@ -121,6 +122,8 @@ export function Floor({ me, alerts }) {
   const [doses, setDoses] = useState([])
   const [covers, setCovers] = useState([])
   const [unit, setUnit] = useState('')
+  const [vit, setVit] = useState([])     // flagged vitals, last 24 h
+  const [vUnits, setVUnits] = useState({})
   const [err, setErr] = useState('')
   const names = alerts.names
 
@@ -136,6 +139,15 @@ export function Floor({ me, alerts }) {
     const e = r.error || d.error || c.error
     if (e) { setErr(e.message); return }
     setErr(''); setRes(r.data); setDoses(d.data); setCovers(c.data)
+    // flagged vitals are an extra: if they cannot load, the rest of the Floor still works
+    const [v, vr] = await Promise.all([
+      supabase.from('vitals').select('id, resident_id, taken_at, critical, flagged, flags, systolic, diastolic, heart_rate, temperature, spo2, glucose, weight_kg')
+        .eq('flagged', true).is('voided_at', null).gte('taken_at', new Date(Date.now() - 864e5).toISOString())
+        .order('taken_at', { ascending: false }).limit(300),
+      supabase.from('vital_ranges').select('vital, unit'),
+    ])
+    if (!v.error && v.data) setVit(v.data)
+    if (!vr.error && vr.data) setVUnits(Object.fromEntries(vr.data.map(x => [x.vital, x.unit])))
   }, [])
 
   useEffect(() => { load(); const t = setInterval(load, 30000); return () => clearInterval(t) }, [load])
@@ -146,6 +158,15 @@ export function Floor({ me, alerts }) {
     doses.filter(d => d.resident_id === id).forEach(d => { o[d.status] = (o[d.status] || 0) + 1 })
     return o
   }
+  // newest flagged reading per resident; a resident with any critical one counts as critical
+  const flagBy = {}
+  vit.forEach(v => {
+    const cur = flagBy[v.resident_id]
+    if (!cur) flagBy[v.resident_id] = { latest: v, critical: !!v.critical }
+    else if (v.critical) cur.critical = true
+  })
+  const flagList = Object.entries(flagBy).sort((a, b) => Number(b[1].critical) - Number(a[1].critical) || (a[1].latest.taken_at < b[1].latest.taken_at ? 1 : -1))
+  const flagCrit = flagList.filter(([, x]) => x.critical).length
   const openFor = id => alerts.rows.filter(a => a.resident_id === id).length
   const resName = id => res.find(r => r.id === id)?.full_name ?? 'Resident'
   const units = [...new Set(res.map(r => r.unit_label).filter(Boolean))]
@@ -153,8 +174,8 @@ export function Floor({ me, alerts }) {
   const rowsShown = res.filter(r => !unit || r.unit_label === unit)
     .map(r => ({ r, c: per(r.id) }))
     .sort((a, b) => {
-      const pa = PROBLEM.some(s => a.c[s]) || openFor(a.r.id) ? 1 : 0
-      const pb = PROBLEM.some(s => b.c[s]) || openFor(b.r.id) ? 1 : 0
+      const pa = PROBLEM.some(s => a.c[s]) || openFor(a.r.id) || flagBy[a.r.id] ? 1 : 0
+      const pb = PROBLEM.some(s => b.c[s]) || openFor(b.r.id) || flagBy[b.r.id] ? 1 : 0
       return pb - pa
     })
 
@@ -170,7 +191,22 @@ export function Floor({ me, alerts }) {
         <div className="stat"><b>{total('refused')}</b><span>Refused today</span></div>
         <div className="stat"><b>{total('given')}</b><span>Given today</span></div>
         <div className="stat"><b>{total('pending')}</b><span>Still to give</span></div>
+        <div className="stat"><b>{flagList.length}</b><span>Residents with flagged vitals (24 h){flagCrit > 0 && ` (${flagCrit} critical)`}</span></div>
       </div>
+
+      {flagList.length > 0 && (
+        <div className="card vt-floor">
+          <h2>Flagged vitals, last 24 hours</h2>
+          {flagList.map(([id, x]) => (
+            <div className={`row${x.critical ? ' flag' : ''}`} key={id}>
+              <span className="name">{resName(id)}</span>
+              {x.critical && <span className="tag hot">Critical</span>}
+              <span className="meta">{fmt(x.latest.taken_at)}</span>
+              <Chips v={x.latest} units={vUnits} />
+            </div>
+          ))}
+        </div>
+      )}
 
       {covers.length > 0 && (
         <div className="card">
@@ -196,7 +232,7 @@ export function Floor({ me, alerts }) {
       <div className="card">
         {rowsShown.length === 0 && <p className="empty">No residents to show.</p>}
         {rowsShown.map(({ r, c }) => {
-          const flagged = PROBLEM.some(s => c[s]) || openFor(r.id) > 0
+          const flagged = PROBLEM.some(s => c[s]) || openFor(r.id) > 0 || !!flagBy[r.id]
           return (
             <div className={`row${flagged ? ' flag' : ''}`} key={r.id}>
               <span className="name">{r.full_name}</span>
@@ -206,6 +242,7 @@ export function Floor({ me, alerts }) {
                 {Object.keys(c).length === 0 ? 'No doses today'
                   : Object.entries(c).map(([s, n]) => `${STATUS_LABEL[s] ?? s} ${n}`).join(' · ')}
                 {openFor(r.id) > 0 && ` · ${openFor(r.id)} alert${openFor(r.id) > 1 ? 's' : ''}`}
+                {flagBy[r.id] && ' · vitals flagged'}
               </span>
             </div>
           )

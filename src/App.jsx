@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import { MyDay, Meds } from './Doses.jsx'
 import { useAlerts, Bell, AlertsPage, Floor, Cover } from './Alerts.jsx'
 import { usePending, Approvals } from './Changes.jsx'
+import { Vitals } from './Vitals.jsx'
 
 const IDLE_MS = 15 * 60 * 1000 // auto-logout after 15 minutes of no activity
 const ROLE_LABEL = { admin: 'Admin', supervisor: 'Supervisor', caregiver: 'Caregiver' }
@@ -50,7 +51,7 @@ export default function App() {
 
   const lead = me.role === 'admin' || me.role === 'supervisor'
   const tabs = [
-    ['myday', 'My day'], ['residents', 'Residents'], ['meds', 'Medications'],
+    ['myday', 'My day'], ['residents', 'Residents'], ['meds', 'Medications'], ['vitals', 'Vitals'],
     ...(lead ? [['floor', 'Floor'], ['approvals', pending.count ? `Approvals (${pending.count})` : 'Approvals'], ['cover', 'Cover']] : []),
     ...(me.role === 'admin' ? [['staff', 'Staff']] : []),
   ]
@@ -73,6 +74,7 @@ export default function App() {
       <main>{shownTab === 'myday' ? <MyDay me={me} />
         : shownTab === 'residents' ? <Residents me={me} />
         : shownTab === 'meds' ? <Meds me={me} />
+        : shownTab === 'vitals' ? <Vitals me={me} />
         : shownTab === 'alerts' ? <AlertsPage me={me} alerts={alerts} />
         : shownTab === 'floor' ? <Floor me={me} alerts={alerts} />
         : shownTab === 'approvals' ? <Approvals me={me} onChange={pending.reload} />
