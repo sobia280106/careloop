@@ -49,8 +49,7 @@ export default function App() {
   const lead = me.role === 'admin' || me.role === 'supervisor'
   const tabs = [
     ['myday', 'My day'], ['residents', 'Residents'], ['meds', 'Medications'],
-    ...(lead ? [['floor', 'Floor']] : []),
-    ['cover', 'Cover'],
+    ...(lead ? [['floor', 'Floor'], ['cover', 'Cover']] : []),
     ...(me.role === 'admin' ? [['staff', 'Staff']] : []),
   ]
   const allowed = tabs.map(([k]) => k).concat('alerts')

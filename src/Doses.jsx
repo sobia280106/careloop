@@ -13,7 +13,9 @@ const LABEL = { given: 'Given', later: 'Later', refused: 'Refused', held: 'Held'
 const nice = m => m.replace('ALREADY_RECORDED: ', 'Already ').replace(/^[A-Z_]+: /, '')
 const hm = d => new Date(d).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 
-export function MyDay() {
+export function MyDay({ me }) {
+  // The dose log ("Given by X at 8:05") is for supervisors and admin only.
+  const seesLog = me?.role === 'admin' || me?.role === 'supervisor'
   const [rows, setRows] = useState([])
   const [err, setErr] = useState('')
   const [pick, setPick] = useState(null) // { id, mode: 'record' | 'correct', outcome, reason }
@@ -58,7 +60,7 @@ export function MyDay() {
                 {r.medications.time_critical && <span className="chip">Time-critical</span>}
                 <span className="chip" data-s={r.status}>{LABEL[r.status]}</span>
               </div>
-              {last && <p className="note">{LABEL[last.outcome]} by {last.who?.full_name} at {hm(last.recorded_at)}{last.reason && ` · ${last.reason}`}</p>}
+              {seesLog && last && <p className="note">{LABEL[last.outcome]} by {last.who?.full_name} at {hm(last.recorded_at)}{last.reason && ` · ${last.reason}`}</p>}
               {open && r.postponed_until && <p className="note">Later: try again after {hm(r.postponed_until)}</p>}
 
               {open && !p && (
