@@ -1,0 +1,14 @@
+/* CareLoop Slice 4b: change requests and approvals */
+.req { display: flex; gap: .75rem; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: .8rem .9rem; margin-bottom: .55rem; border-radius: 10px; border-left: 5px solid #b54708; background: rgba(181,71,8,.1); }
+.req-urgent { border-left-color: #d92d20; background: rgba(217,45,32,.1); }
+.req-main { flex: 1 1 260px; min-width: 0; }
+.req-sum { margin: 0 0 .25rem; font-weight: 600; }
+.req-meta { margin: .1rem 0 0; font-size: .85rem; opacity: .85; }
+.req-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.tag { display: inline-block; margin-right: .4rem; padding: 1px 8px; border-radius: 999px; font-size: .78rem; font-weight: 600; background: rgba(127,127,127,.25); }
+.tag.hot { background: #d92d20; color: #fff; }
+.tag.ok { background: #067647; color: #fff; }
+.pendnote { margin: .3rem 0 0; font-size: .85rem; padding: 4px 10px; border-radius: 8px; background: rgba(181,71,8,.15); }
+.pendnote.hot { background: rgba(217,45,32,.18); }
+.change .check { display: flex; gap: .5rem; align-items: center; }
+.change .acts { display: flex; gap: .5rem; }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import './doses.css'
+import { ChangeForm, NewMedRequest } from './Changes.jsx'
 
 const REASONS = {
   refused: ['Did not want it', 'Felt unwell', 'Trouble swallowing', 'Side effects', 'Other'],
@@ -19,15 +20,22 @@ export function MyDay({ me }) {
   const [rows, setRows] = useState([])
   const [err, setErr] = useState('')
   const [pick, setPick] = useState(null) // { id, mode: 'record' | 'correct', outcome, reason }
+  const [pend, setPend] = useState({}) // medication_id -> waiting requests
 
   const load = async () => {
     await supabase.rpc('generate_dose_events')
     const a = new Date(); a.setHours(0, 0, 0, 0)
     const b = new Date(a); b.setDate(b.getDate() + 1)
     const { data, error } = await supabase.from('dose_events')
-      .select('id, status, scheduled_at, postponed_until, is_prn, medications(drug_name, dose_text, time_critical), residents(full_name, room), dose_records(outcome, reason, recorded_at, who:profiles!recorded_by(full_name))')
+      .select('id, status, medication_id, scheduled_at, postponed_until, is_prn, medications(drug_name, dose_text, time_critical), residents(full_name, room), dose_records(outcome, reason, recorded_at, who:profiles!recorded_by(full_name))')
       .gte('scheduled_at', a.toISOString()).lt('scheduled_at', b.toISOString()).order('scheduled_at')
     if (error) setErr(error.message); else setRows(data)
+    const pr = await supabase.from('schedule_proposals').select('medication_id, summary, urgent').eq('status', 'pending')
+    if (!pr.error && pr.data) {
+      const m = {}
+      pr.data.filter(x => x.medication_id).forEach(x => { (m[x.medication_id] ||= []).push(x) })
+      setPend(m)
+    }
   }
   useEffect(() => { load() }, [])
 
@@ -61,6 +69,9 @@ export function MyDay({ me }) {
                 <span className="chip" data-s={r.status}>{LABEL[r.status]}</span>
               </div>
               {seesLog && last && <p className="note">{LABEL[last.outcome]} by {last.who?.full_name} at {hm(last.recorded_at)}{last.reason && ` · ${last.reason}`}</p>}
+              {(pend[r.medication_id] || []).map((x, i) => (
+                <p key={i} className={`pendnote${x.urgent ? ' hot' : ''}`}>{x.urgent ? 'Urgent change pending' : 'Change pending'}: {x.summary}</p>
+              ))}
               {open && r.postponed_until && <p className="note">Later: try again after {hm(r.postponed_until)}</p>}
 
               {open && !p && (
@@ -110,13 +121,19 @@ export function MyDay({ me }) {
 
 export function Meds({ me }) {
   const isAdmin = me.role === 'admin'
+  const lead = isAdmin || me.role === 'supervisor'
   const blank = { drug: '', dose: '', times: '', prn: false, crit: false }
   const [res, setRes] = useState([])
   const [rid, setRid] = useState('')
   const [meds, setMeds] = useState([])
+  const [pending, setPending] = useState([])   // waiting requests for this resident
+  const [paused, setPaused] = useState({})     // medication_id -> pause
+  const [changesOn, setChangesOn] = useState(true)
   const [f, setF] = useState(blank)
   const [prn, setPrn] = useState(null) // { id, reason }
+  const [change, setChange] = useState(null) // medication id whose change form is open
   const [err, setErr] = useState('')
+  const [ok, setOk] = useState('')
 
   useEffect(() => {
     supabase.from('residents').select('id, full_name').eq('active', true).order('full_name')
@@ -126,7 +143,17 @@ export function Meds({ me }) {
     if (!rid) return
     const { data, error } = await supabase.from('medications').select('*, schedule_times(time_of_day)')
       .eq('resident_id', rid).neq('status', 'discontinued').order('drug_name')
-    if (error) setErr(error.message); else setMeds(data)
+    if (error) { setErr(error.message); return }
+    setMeds(data)
+    const [p, z] = await Promise.all([
+      supabase.from('schedule_proposals').select('id, medication_id, kind, summary, urgent, proposed_by').eq('status', 'pending').eq('resident_id', rid),
+      data.length ? supabase.from('medication_pauses').select('medication_id, starts_at, ends_at').in('medication_id', data.map(m => m.id)) : Promise.resolve({ data: [] }),
+    ])
+    setChangesOn(!p.error)   // switched off quietly until the Slice 4a database script has been run
+    setPending(p.data || [])
+    const now = Date.now(), pz = {}
+    ;(z.data || []).forEach(x => { if (new Date(x.starts_at) <= now && (!x.ends_at || new Date(x.ends_at) > now)) pz[x.medication_id] = x })
+    setPaused(pz)
   }
   useEffect(() => { load() }, [rid])
 
@@ -148,14 +175,24 @@ export function Meds({ me }) {
     const { error } = await supabase.rpc('record_prn', { p_medication: prn.id, p_reason: prn.reason })
     setErr(error ? nice(error.message) : ''); setPrn(null)
   }
+  const cancel = async id => {
+    const { error } = await supabase.rpc('cancel_proposal', { p_id: id })
+    setErr(error ? nice(error.message) : ''); load()
+  }
+  const done = text => { setOk(text); setChange(null); setErr(''); load() }
+
+  const forMed = id => pending.filter(x => x.medication_id === id)
+  const adds = pending.filter(x => !x.medication_id)
+  const until = z => z.ends_at ? ` until ${new Date(z.ends_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })}` : ''
 
   return (
     <>
       <h1>Medications</h1>
-      <p className="sub">{isAdmin ? 'Add medications and times for a resident.' : 'Medications for your residents.'}</p>
+      <p className="sub">{isAdmin ? 'Add medications and times for a resident. Changes you make apply at once.' : 'Medications for your residents. Ask for a change and a supervisor or admin will decide.'}</p>
       {err && <p className="err" role="alert">{err}</p>}
+      {ok && <p className="ok" role="status">{ok}</p>}
       <p><label>Resident{' '}
-        <select value={rid} onChange={e => setRid(e.target.value)}>
+        <select value={rid} onChange={e => { setRid(e.target.value); setChange(null); setOk('') }}>
           {res.map(r => <option key={r.id} value={r.id}>{r.full_name}</option>)}
         </select></label></p>
 
@@ -169,20 +206,44 @@ export function Meds({ me }) {
           <button className="btn">Add medication</button>
         </form>
       )}
+      {!isAdmin && rid && changesOn && <NewMedRequest rid={rid} onDone={done} />}
+
+      {adds.length > 0 && (
+        <div className="card">
+          <h2>Waiting for approval</h2>
+          {adds.map(x => (
+            <div className="row" key={x.id}>
+              <span className="name">{x.summary.charAt(0).toUpperCase() + x.summary.slice(1)}</span>
+              {(x.proposed_by === me.id || lead) && <button className="btn quiet" onClick={() => cancel(x.id)}>Cancel request</button>}
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="card">
         {meds.length === 0 && <p className="empty">No medications for this resident yet.</p>}
         {meds.map(m => (
-          <div className="row" key={m.id}>
-            <span className="name">{m.drug_name} {m.dose_text}</span>
-            <span className="meta">{m.is_prn ? 'As needed' : m.schedule_times.map(s => s.time_of_day.slice(0, 5)).sort().join(', ')}{m.time_critical && ' · Time-critical'}</span>
-            {m.is_prn && (prn?.id === m.id ? (
-              <>
-                <input aria-label="Reason given" placeholder="Why was it given?" value={prn.reason} onChange={e => setPrn({ ...prn, reason: e.target.value })} />
-                <button className="btn" disabled={!prn.reason.trim()} onClick={givePrn}>Confirm</button>
-                <button className="btn quiet" onClick={() => setPrn(null)}>Cancel</button>
-              </>
-            ) : <button className="btn quiet" onClick={() => setPrn({ id: m.id, reason: '' })}>Give now</button>)}
+          <div key={m.id}>
+            <div className="row">
+              <span className="name">{m.drug_name} {m.dose_text}</span>
+              <span className="meta">{m.is_prn ? 'As needed' : m.schedule_times.map(s => s.time_of_day.slice(0, 5)).sort().join(', ')}{m.time_critical && ' · Time-critical'}</span>
+              {paused[m.id] && <span className="tag hot">Paused{until(paused[m.id])}</span>}
+              {m.is_prn && (prn?.id === m.id ? (
+                <>
+                  <input aria-label="Reason given" placeholder="Why was it given?" value={prn.reason} onChange={e => setPrn({ ...prn, reason: e.target.value })} />
+                  <button className="btn" disabled={!prn.reason.trim()} onClick={givePrn}>Confirm</button>
+                  <button className="btn quiet" onClick={() => setPrn(null)}>Cancel</button>
+                </>
+              ) : !paused[m.id] && <button className="btn quiet" onClick={() => setPrn({ id: m.id, reason: '' })}>Give now</button>)}
+              {changesOn && change !== m.id && <button className="btn quiet" onClick={() => { setChange(m.id); setOk('') }}>{isAdmin ? 'Change' : 'Request change'}</button>}
+            </div>
+            {forMed(m.id).map(x => (
+              <p key={x.id} className={`pendnote${x.urgent ? ' hot' : ''}`}>
+                {x.urgent ? 'Urgent change pending' : 'Change pending'}: {x.summary}{' '}
+                {(x.proposed_by === me.id || lead) && <button className="btn quiet" onClick={() => cancel(x.id)}>Cancel request</button>}
+              </p>
+            ))}
+            {change === m.id && <ChangeForm med={m} rid={rid} me={me} paused={!!paused[m.id]} onDone={done} onCancel={() => setChange(null)} />}
           </div>
         ))}
       </div>

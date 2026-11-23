@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { MyDay, Meds } from './Doses.jsx'
 import { useAlerts, Bell, AlertsPage, Floor, Cover } from './Alerts.jsx'
+import { usePending, Approvals } from './Changes.jsx'
 
 const IDLE_MS = 15 * 60 * 1000 // auto-logout after 15 minutes of no activity
 const ROLE_LABEL = { admin: 'Admin', supervisor: 'Supervisor', caregiver: 'Caregiver' }
@@ -34,6 +35,7 @@ export default function App() {
   }, [session])
 
   const alerts = useAlerts(me) // must stay above the early returns below
+  const pending = usePending(me)
 
   if (session === undefined) return <main><p className="sub">Loading…</p></main>
   if (!session) return <Login />
@@ -49,7 +51,7 @@ export default function App() {
   const lead = me.role === 'admin' || me.role === 'supervisor'
   const tabs = [
     ['myday', 'My day'], ['residents', 'Residents'], ['meds', 'Medications'],
-    ...(lead ? [['floor', 'Floor'], ['cover', 'Cover']] : []),
+    ...(lead ? [['floor', 'Floor'], ['approvals', pending.count ? `Approvals (${pending.count})` : 'Approvals'], ['cover', 'Cover']] : []),
     ...(me.role === 'admin' ? [['staff', 'Staff']] : []),
   ]
   const allowed = tabs.map(([k]) => k).concat('alerts')
@@ -73,6 +75,7 @@ export default function App() {
         : shownTab === 'meds' ? <Meds me={me} />
         : shownTab === 'alerts' ? <AlertsPage me={me} alerts={alerts} />
         : shownTab === 'floor' ? <Floor me={me} alerts={alerts} />
+        : shownTab === 'approvals' ? <Approvals me={me} onChange={pending.reload} />
         : shownTab === 'cover' ? <Cover me={me} />
         : shownTab === 'staff' ? <Staff me={me} />
         : <MyDay me={me} />}</main>
