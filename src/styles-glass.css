@@ -1,0 +1,198 @@
+/* CareLoop theme: dark glassmorphism. Visual styling only; layout rules are unchanged.
+   Every colour lives in the variables below, so the theme is easy to tweak. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Background */
+  --bg: #05070F;
+  --bg-grad-top: #0A0F1F;
+  --bloom-blue: rgba(37, 99, 235, 0.18);     /* #2563EB, top-right */
+  --bloom-violet: rgba(124, 58, 237, 0.16);  /* #7C3AED, bottom-left */
+
+  /* Glass */
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-bg-hover: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --glass-border-hover: rgba(255, 255, 255, 0.18);
+  --glass-blur: blur(16px) saturate(140%);
+  --glass-blur-nav: blur(24px) saturate(150%);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --radius-card: 16px;
+  --radius-control: 12px;
+
+  /* Text */
+  --ink: #E8EEF9;
+  --muted: #94A3B8;
+  --link: #60A5FA;
+
+  /* Primary accent (active tab, Given button, toggles) */
+  --accent-from: #2DD4BF;
+  --accent-to: #38BDF8;
+  --accent-grad: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+  --accent-glow: 0 0 16px rgba(45, 212, 191, 0.35);
+  --accent-glow-strong: 0 0 22px rgba(45, 212, 191, 0.50);
+  --accent-ink: #04141C;                     /* dark text on the bright gradient (AA) */
+  --focus: #38BDF8;
+  --focus-glow: 0 0 0 2px rgba(56, 189, 248, 0.75), 0 0 16px rgba(56, 189, 248, 0.45);
+
+  /* Critical: reserved for Missed / Time-critical only */
+  --red: #FF3B4E;
+  --red-bg: rgba(255, 59, 78, 0.18);
+  --red-glow: 0 0 14px rgba(255, 59, 78, 0.55);
+  --red-glow-low: 0 0 8px rgba(255, 59, 78, 0.35);
+  --red-glow-high: 0 0 20px rgba(255, 59, 78, 0.80);
+  --red-text-glow: 0 0 8px rgba(255, 59, 78, 0.55);
+  --red-edge: rgba(255, 59, 78, 0.60);       /* faint left border on missed cards */
+  --red-inner: rgba(255, 59, 78, 0.10);
+
+  /* Other statuses (muted, never compete with red) */
+  --ok: #34D399;
+  --ok-bg: rgba(52, 211, 153, 0.12);
+  --ok-glow: 0 0 8px rgba(52, 211, 153, 0.20);
+  --amber: #FBBF24;
+  --amber-bg: rgba(251, 191, 36, 0.12);
+
+  --disabled-bg: rgba(255, 255, 255, 0.03);
+  --disabled-ink: #6B7A90;
+  --menu-bg: #0B1020;                        /* native dropdown list */
+
+  --ease: 150ms ease;
+  color-scheme: dark;
+}
+
+/* Browsers without backdrop-filter: solid, slightly translucent surfaces */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --glass-bg: rgba(15, 20, 35, 0.85);
+    --glass-bg-hover: rgba(22, 29, 50, 0.90);
+  }
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 17px/1.5 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+
+/* Fixed gradient + light blooms: stays put while content scrolls */
+body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(60vmax 60vmax at 100% 0%, var(--bloom-blue), transparent 65%),
+    radial-gradient(60vmax 60vmax at 0% 100%, var(--bloom-violet), transparent 65%),
+    linear-gradient(180deg, var(--bg-grad-top), var(--bg) 60%); }
+
+button, input, select { font: inherit; color: inherit; }
+a { color: var(--link); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; box-shadow: var(--focus-glow); }
+
+/* ---------- Navbar ---------- */
+.bar { position: sticky; top: 0; z-index: 100;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+  padding: 12px 20px; color: var(--ink);
+  background: var(--glass-bg); -webkit-backdrop-filter: var(--glass-blur-nav); backdrop-filter: var(--glass-blur-nav);
+  border-bottom: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); }
+.bar :focus-visible { outline-color: var(--focus); }
+.brand { font-weight: 700; font-size: 1.3rem; margin-right: auto; letter-spacing: 0.01em; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tab { border: 0; background: none; padding: 8px 14px; border-radius: var(--radius-control); cursor: pointer;
+  color: var(--ink); transition: background-color var(--ease), box-shadow var(--ease); }
+.tab:hover { background: var(--glass-bg-hover); }
+.tab[aria-current='page'] { background: var(--accent-grad); color: var(--accent-ink); font-weight: 600;
+  box-shadow: var(--accent-glow); }
+.who { color: var(--muted); font-size: .95rem; }
+.bar .bell { color: var(--ink); }
+.bar .btn.quiet { color: var(--ink); }
+
+/* ---------- Page ---------- */
+main { max-width: 900px; margin: 0 auto; padding: 24px 20px 60px; }
+h1, h2, h3 { font-weight: 600; color: var(--link); letter-spacing: -0.005em; }
+h1 { font-size: 1.5rem; margin: 0 0 4px; }
+.sub { color: var(--muted); margin: 0 0 20px; }
+
+/* ---------- Cards ---------- */
+.card { background: var(--glass-bg); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border); border-radius: var(--radius-card); box-shadow: var(--glass-shadow);
+  padding: 16px; margin-bottom: 20px;
+  transition: background-color var(--ease), border-color var(--ease); }
+.card:hover { background: var(--glass-bg-hover); border-color: var(--glass-border-hover); }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;
+  padding: 12px 0; border-top: 1px solid var(--glass-border); }
+.row:first-child { border-top: 0; }
+.row .name { font-weight: 600; flex: 1 1 200px; }
+.row .meta { color: var(--muted); flex: 1 1 160px; }
+
+/* Missed dose cards: faint red left edge + subtle inner glow */
+.card:has(.chip[data-s="missed"]),
+.row:has(.chip[data-s="missed"]) {
+  box-shadow: var(--glass-shadow), inset 3px 0 0 var(--red-edge), inset 0 0 28px var(--red-inner); }
+.row:has(.chip[data-s="missed"]) { box-shadow: inset 3px 0 0 var(--red-edge), inset 0 0 28px var(--red-inner); }
+
+/* ---------- Forms ---------- */
+.fields { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.fields label { display: grid; gap: 4px; font-size: .9rem; color: var(--muted); }
+input, select { padding: 9px 11px; min-height: 44px; color: var(--ink);
+  background: var(--glass-bg); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border); border-radius: var(--radius-control); box-shadow: var(--glass-shadow);
+  transition: background-color var(--ease), border-color var(--ease), box-shadow var(--ease); }
+input:hover, select:hover { background: var(--glass-bg-hover); border-color: var(--glass-border-hover); }
+input:focus-visible, select:focus-visible { border-color: var(--focus); }
+input::placeholder { color: var(--muted); opacity: 1; }
+select option { background: var(--menu-bg); color: var(--ink); }
+input[type='checkbox'], input[type='radio'] { accent-color: var(--accent-from); }
+
+/* ---------- Buttons ---------- */
+/* Primary (Given, main actions): teal-cyan gradient with glow */
+.btn { background: var(--accent-grad); color: var(--accent-ink); border: 0; border-radius: var(--radius-control);
+  padding: 10px 18px; min-height: 44px; cursor: pointer; font-weight: 600; box-shadow: var(--accent-glow);
+  transition: box-shadow var(--ease), filter var(--ease), background-color var(--ease), border-color var(--ease); }
+.btn:hover { box-shadow: var(--accent-glow-strong); filter: brightness(1.08); }
+/* Neutral (Later, Refused, Not given): plain glass, no colour */
+.btn.quiet { background: var(--glass-bg); color: var(--ink); filter: none;
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); font-weight: 500; }
+.btn.quiet:hover { background: var(--glass-bg-hover); border-color: var(--glass-border-hover); box-shadow: var(--glass-shadow); }
+.btn:disabled, input:disabled, select:disabled { background: var(--disabled-bg); color: var(--disabled-ink);
+  border: 1px solid var(--glass-border); box-shadow: none; filter: none; cursor: not-allowed; }
+
+/* Errors use amber so red keeps its single meaning */
+.err { color: var(--amber); margin: 0 0 12px; }
+.login { max-width: 380px; margin: 12vh auto; padding: 0 20px; }
+.login .card { display: grid; gap: 14px; }
+.login label { display: grid; gap: 4px; color: var(--muted); font-size: .9rem; }
+.empty { color: var(--muted); padding: 8px 0; }
+
+/* Colour for the status chips, tags and notes defined in the other style files.
+   ":root" in front makes these win whatever the file order is. Colours and glow only, no layout.
+   Borders are drawn with inset shadows so sizes never change. */
+:root .chip, :root .tag, :root .badge { letter-spacing: 0.02em; text-transform: uppercase; font-weight: 600; }
+
+:root .chip { background-color: var(--glass-bg); color: var(--ink); box-shadow: inset 0 0 0 1px var(--glass-border-hover); }
+:root .chip[data-s="given"] { background-color: var(--ok-bg); color: var(--ok); box-shadow: inset 0 0 0 1px var(--ok), var(--ok-glow); }
+:root .chip[data-s="pending"], :root .chip[data-s="later"] { background-color: var(--amber-bg); color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); }
+:root .chip[data-s="refused"] { background-color: var(--glass-bg-hover); color: var(--muted); box-shadow: inset 0 0 0 1px var(--glass-border-hover); }
+:root .chip[data-s="missed"] { background-color: var(--red-bg); color: var(--red); font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--red), var(--red-glow); }
+
+:root .tag { background-color: var(--glass-bg); color: var(--ink); box-shadow: inset 0 0 0 1px var(--glass-border-hover); }
+:root .tag.ok { background-color: var(--ok-bg); color: var(--ok); box-shadow: inset 0 0 0 1px var(--ok), var(--ok-glow); }
+:root .tag.hot { background-color: var(--red-bg); color: var(--red); font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--red), var(--red-glow);
+  animation: critical-pulse 2s ease-in-out infinite; }
+
+/* Counts and bell badge (e.g. 123, "3 missed") */
+:root .badge { background-color: var(--accent-from); background-image: var(--accent-grad); color: var(--accent-ink); }
+:root .badge.hot { background-color: var(--red-bg); background-image: none; color: var(--red); font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--red), var(--red-glow); text-shadow: var(--red-text-glow); }
+
+:root .note { color: var(--muted); }
+:root .ok { color: var(--ok); }
+:root .pendnote { background-color: var(--amber-bg); color: var(--ink); box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.35); }
+:root .pendnote.hot { background-color: var(--red-bg); box-shadow: inset 0 0 0 1px var(--red), var(--red-glow); }
+
+/* Gentle pulse: glow intensity only */
+@keyframes critical-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px var(--red), var(--red-glow-low); }
+  50%      { box-shadow: inset 0 0 0 1px var(--red), var(--red-glow-high); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
