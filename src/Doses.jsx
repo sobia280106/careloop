@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import './doses.css'
+import './myday.css'
 import { ChangeForm, NewMedRequest } from './Changes.jsx'
 
 const REASONS = {
@@ -19,6 +20,7 @@ export function MyDay({ me }) {
   const seesLog = me?.role === 'admin' || me?.role === 'supervisor'
   const [rows, setRows] = useState([])
   const [err, setErr] = useState('')
+  const [view, setView] = useState('resident') // 'resident' | 'time'
   const [pick, setPick] = useState(null) // { id, mode: 'record' | 'correct', outcome, reason }
   const [pend, setPend] = useState({}) // medication_id -> waiting requests
 
@@ -26,8 +28,10 @@ export function MyDay({ me }) {
     await supabase.rpc('generate_dose_events')
     const a = new Date(); a.setHours(0, 0, 0, 0)
     const b = new Date(a); b.setDate(b.getDate() + 1)
+    // Caregivers never ask for the dose log: the database does not let them read it.
+    const log = seesLog ? ', dose_records(outcome, reason, recorded_at, who:profiles!recorded_by(full_name))' : ''
     const { data, error } = await supabase.from('dose_events')
-      .select('id, status, medication_id, scheduled_at, postponed_until, is_prn, medications(drug_name, dose_text, time_critical), residents(full_name, room), dose_records(outcome, reason, recorded_at, who:profiles!recorded_by(full_name))')
+      .select('id, status, medication_id, resident_id, scheduled_at, postponed_until, is_prn, medications(drug_name, dose_text, time_critical), residents(full_name, room)' + log)
       .gte('scheduled_at', a.toISOString()).lt('scheduled_at', b.toISOString()).order('scheduled_at')
     if (error) setErr(error.message); else setRows(data)
     const pr = await supabase.from('schedule_proposals').select('medication_id, summary, urgent').eq('status', 'pending')
@@ -45,6 +49,87 @@ export function MyDay({ me }) {
   }
   const record = (id, o, reason = null) => call('record_dose', { p_event: id, p_outcome: o, p_reason: reason })
 
+  // one dose card; showWho = show the resident's name (time view) instead of the time (resident view)
+  const dose = (r, showWho) => {
+    const last = [...(r.dose_records || [])].filter(x => x.outcome !== 'later')
+      .sort((x, y) => (x.recorded_at < y.recorded_at ? 1 : -1))[0]
+    const open = r.status === 'pending' || r.status === 'missed'
+    const p = pick?.id === r.id ? pick : null
+    return (
+      <div className="card dose" key={r.id}>
+        <div className="top">
+          <strong>{showWho ? `${r.residents.full_name}${r.residents.room ? ` (Room ${r.residents.room})` : ''}` : hm(r.scheduled_at)}</strong>
+          <span>{r.medications.drug_name} {r.medications.dose_text}</span>
+          {r.medications.time_critical && <span className="chip">Time-critical</span>}
+          <span className="chip" data-s={r.status}>{LABEL[r.status]}</span>
+        </div>
+        {seesLog && last && <p className="note">{LABEL[last.outcome]} by {last.who?.full_name} at {hm(last.recorded_at)}{last.reason && ` · ${last.reason}`}</p>}
+        {(pend[r.medication_id] || []).map((x, i) => (
+          <p key={i} className={`pendnote${x.urgent ? ' hot' : ''}`}>{x.urgent ? 'Urgent change pending' : 'Change pending'}: {x.summary}</p>
+        ))}
+        {open && r.postponed_until && <p className="note">Later: try again after {hm(r.postponed_until)}</p>}
+
+        {open && !p && (
+          <div className="acts">
+            <button className="btn" onClick={() => record(r.id, 'given')}>Given</button>
+            <button className="btn quiet" onClick={() => record(r.id, 'later')}>Later</button>
+            <button className="btn quiet" onClick={() => setPick({ id: r.id, mode: 'record', outcome: 'refused', reason: '' })}>Refused</button>
+            <select aria-label="Not given" value="" onChange={e => e.target.value && setPick({ id: r.id, mode: 'record', outcome: e.target.value, reason: '' })}>
+              <option value="">Not given…</option>
+              <option value="held">Held</option>
+              <option value="not_available">Not available</option>
+              <option value="resident_away">Resident away</option>
+            </select>
+          </div>
+        )}
+        {!open && !p && <div className="acts"><button className="btn quiet" onClick={() => setPick({ id: r.id, mode: 'correct', outcome: 'given', reason: '' })}>Correct</button></div>}
+
+        {p && (
+          <div className="acts">
+            {p.mode === 'correct' ? (
+              <>
+                <select aria-label="Correct outcome" value={p.outcome} onChange={e => setPick({ ...p, outcome: e.target.value })}>
+                  {['given', 'refused', 'held', 'not_available', 'resident_away'].map(o => <option key={o} value={o}>{LABEL[o]}</option>)}
+                </select>
+                <input aria-label="Reason for correction" placeholder="Reason for correction" value={p.reason} onChange={e => setPick({ ...p, reason: e.target.value })} />
+              </>
+            ) : (
+              <select aria-label="Reason" value={p.reason} onChange={e => setPick({ ...p, reason: e.target.value })}>
+                <option value="">{LABEL[p.outcome]}: choose a reason…</option>
+                {REASONS[p.outcome].map(x => <option key={x}>{x}</option>)}
+              </select>
+            )}
+            <button className="btn" disabled={!p.reason.trim()}
+              onClick={() => p.mode === 'correct'
+                ? call('correct_dose', { p_event: r.id, p_new_outcome: p.outcome, p_reason: p.reason })
+                : record(r.id, p.outcome, p.reason)}>Confirm</button>
+            <button className="btn quiet" onClick={() => setPick(null)}>Cancel</button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // resident view: residents with something still to do come first (earliest open dose first)
+  const groups = (() => {
+    const m = new Map()
+    rows.forEach(r => {
+      const g = m.get(r.resident_id) || { id: r.resident_id, name: r.residents.full_name, room: r.residents.room, items: [], counts: {}, firstOpen: null }
+      g.items.push(r)
+      g.counts[r.status] = (g.counts[r.status] || 0) + 1
+      if ((r.status === 'pending' || r.status === 'missed') && (!g.firstOpen || r.scheduled_at < g.firstOpen)) g.firstOpen = r.scheduled_at
+      m.set(r.resident_id, g)
+    })
+    return [...m.values()].sort((a, b) =>
+      (a.firstOpen ? 0 : 1) - (b.firstOpen ? 0 : 1)
+      || (a.firstOpen && b.firstOpen ? (a.firstOpen < b.firstOpen ? -1 : 1) : 0)
+      || a.name.localeCompare(b.name))
+  })()
+  const summary = c => {
+    const other = Object.entries(c).filter(([s]) => !['pending', 'missed', 'given'].includes(s)).reduce((n, [, v]) => n + v, 0)
+    return [c.pending && `${c.pending} due`, c.missed && `${c.missed} missed`, c.given && `${c.given} given`, other && `${other} other`].filter(Boolean).join(' · ')
+  }
+
   let prev = ''
   return (
     <>
@@ -52,66 +137,24 @@ export function MyDay({ me }) {
       <p className="sub">Today’s doses for your residents. The first person to record a dose wins.</p>
       {err && <p className="err" role="alert">{err}</p>}
       {rows.length === 0 && <p className="empty">No doses scheduled today for your residents.</p>}
-      {rows.map(r => {
+      {rows.length > 0 && (
+        <div className="md-seg" role="group" aria-label="Group doses by">
+          <button className="btn quiet" aria-pressed={view === 'resident'} onClick={() => setView('resident')}>By resident</button>
+          <button className="btn quiet" aria-pressed={view === 'time'} onClick={() => setView('time')}>By time</button>
+        </div>
+      )}
+      {view === 'resident' && groups.map(g => (
+        <section key={g.id}>
+          <h2 className="reshead">{g.name}{g.room && ` (Room ${g.room})`} <span>{summary(g.counts)}</span></h2>
+          {g.items.map(r => dose(r, false))}
+        </section>
+      ))}
+      {view === 'time' && rows.map(r => {
         const t = hm(r.scheduled_at), head = t !== prev; prev = t
-        const last = [...r.dose_records].filter(x => x.outcome !== 'later')
-          .sort((x, y) => (x.recorded_at < y.recorded_at ? 1 : -1))[0]
-        const open = r.status === 'pending' || r.status === 'missed'
-        const p = pick?.id === r.id ? pick : null
         return (
           <div key={r.id}>
             {head && <h2 className="timehead">{t}</h2>}
-            <div className="card dose">
-              <div className="top">
-                <strong>{r.residents.full_name}{r.residents.room && ` (Room ${r.residents.room})`}</strong>
-                <span>{r.medications.drug_name} {r.medications.dose_text}</span>
-                {r.medications.time_critical && <span className="chip">Time-critical</span>}
-                <span className="chip" data-s={r.status}>{LABEL[r.status]}</span>
-              </div>
-              {seesLog && last && <p className="note">{LABEL[last.outcome]} by {last.who?.full_name} at {hm(last.recorded_at)}{last.reason && ` · ${last.reason}`}</p>}
-              {(pend[r.medication_id] || []).map((x, i) => (
-                <p key={i} className={`pendnote${x.urgent ? ' hot' : ''}`}>{x.urgent ? 'Urgent change pending' : 'Change pending'}: {x.summary}</p>
-              ))}
-              {open && r.postponed_until && <p className="note">Later: try again after {hm(r.postponed_until)}</p>}
-
-              {open && !p && (
-                <div className="acts">
-                  <button className="btn" onClick={() => record(r.id, 'given')}>Given</button>
-                  <button className="btn quiet" onClick={() => record(r.id, 'later')}>Later</button>
-                  <button className="btn quiet" onClick={() => setPick({ id: r.id, mode: 'record', outcome: 'refused', reason: '' })}>Refused</button>
-                  <select aria-label="Not given" value="" onChange={e => e.target.value && setPick({ id: r.id, mode: 'record', outcome: e.target.value, reason: '' })}>
-                    <option value="">Not given…</option>
-                    <option value="held">Held</option>
-                    <option value="not_available">Not available</option>
-                    <option value="resident_away">Resident away</option>
-                  </select>
-                </div>
-              )}
-              {!open && !p && <div className="acts"><button className="btn quiet" onClick={() => setPick({ id: r.id, mode: 'correct', outcome: 'given', reason: '' })}>Correct</button></div>}
-
-              {p && (
-                <div className="acts">
-                  {p.mode === 'correct' ? (
-                    <>
-                      <select aria-label="Correct outcome" value={p.outcome} onChange={e => setPick({ ...p, outcome: e.target.value })}>
-                        {['given', 'refused', 'held', 'not_available', 'resident_away'].map(o => <option key={o} value={o}>{LABEL[o]}</option>)}
-                      </select>
-                      <input aria-label="Reason for correction" placeholder="Reason for correction" value={p.reason} onChange={e => setPick({ ...p, reason: e.target.value })} />
-                    </>
-                  ) : (
-                    <select aria-label="Reason" value={p.reason} onChange={e => setPick({ ...p, reason: e.target.value })}>
-                      <option value="">{LABEL[p.outcome]}: choose a reason…</option>
-                      {REASONS[p.outcome].map(x => <option key={x}>{x}</option>)}
-                    </select>
-                  )}
-                  <button className="btn" disabled={!p.reason.trim()}
-                    onClick={() => p.mode === 'correct'
-                      ? call('correct_dose', { p_event: r.id, p_new_outcome: p.outcome, p_reason: p.reason })
-                      : record(r.id, p.outcome, p.reason)}>Confirm</button>
-                  <button className="btn quiet" onClick={() => setPick(null)}>Cancel</button>
-                </div>
-              )}
-            </div>
+            {dose(r, true)}
           </div>
         )
       })}

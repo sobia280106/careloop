@@ -37,6 +37,9 @@ export default function App() {
     return () => { clearTimeout(t); evs.forEach(e => window.removeEventListener(e, reset)) }
   }, [session])
 
+  const reloadMe = () => session && supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle()
+    .then(({ data }) => setMe(data))
+
   const alerts = useAlerts(me) // must stay above the early returns below
   const pending = usePending(me)
 
@@ -83,7 +86,7 @@ export default function App() {
         : shownTab === 'floor' ? <Floor me={me} alerts={alerts} />
         : shownTab === 'approvals' ? <Approvals me={me} onChange={pending.reload} />
         : shownTab === 'cover' ? <Cover me={me} />
-        : shownTab === 'staff' ? <Staff me={me} />
+        : shownTab === 'staff' ? <Staff me={me} onRenamed={reloadMe} />
         : <MyDay me={me} />}</main>
     </>
   )
@@ -193,8 +196,9 @@ function Residents({ me }) {
   )
 }
 
-function Staff({ me }) {
+function Staff({ me, onRenamed }) {
   const [rows, setRows] = useState([])
+  const [edit, setEdit] = useState(null) // { id, name }
   const [err, setErr] = useState('')
   const load = async () => {
     const { data, error } = await supabase.from('profiles').select('*').order('full_name')
@@ -205,6 +209,14 @@ function Staff({ me }) {
     const { error } = await supabase.from('profiles').update(patch).eq('id', id)
     if (error) setErr(error.message); else { setErr(''); load() }
   }
+  const rename = async () => {
+    const name = edit.name.trim()
+    if (name.length < 2) return setErr('Enter a name with at least 2 letters.')
+    const { data, error } = await supabase.from('profiles').update({ full_name: name }).eq('id', edit.id).select('id')
+    if (error) setErr(error.message)
+    else if (!data || data.length === 0) setErr('The database did not allow that rename.')
+    else { setErr(''); if (edit.id === me.id && onRenamed) onRenamed(); setEdit(null); load() }
+  }
   return (
     <>
       <h1>Staff</h1>
@@ -213,7 +225,18 @@ function Staff({ me }) {
       <div className="card">
         {rows.map(p => (
           <div className="row" key={p.id}>
-            <span className="name">{p.full_name}{p.id === me.id && ' (you)'}</span>
+            {edit?.id === p.id ? (
+              <>
+                <input aria-label={`New name for ${p.full_name}`} value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })} />
+                <button className="btn" onClick={rename}>Save name</button>
+                <button className="btn quiet" onClick={() => setEdit(null)}>Cancel</button>
+              </>
+            ) : (
+              <>
+                <span className="name">{p.full_name}{p.id === me.id && ' (you)'}</span>
+                <button className="btn quiet" aria-label={`Rename ${p.full_name}`} onClick={() => setEdit({ id: p.id, name: p.full_name })}>Rename</button>
+              </>
+            )}
             <select aria-label={`Role for ${p.full_name}`} value={p.role} disabled={p.id === me.id}
               onChange={e => update(p.id, { role: e.target.value })}>
               {Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
