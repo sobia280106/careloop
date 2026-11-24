@@ -31,3 +31,11 @@
 .vt-mini { display: grid; gap: 2px; font-size: .75rem; color: var(--muted); }
 
 .vt-floor .row { flex-wrap: wrap; }
+
+/* prototype AI notes in the history */
+.tag.vt-ai { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); border: 1px solid var(--accent); color: var(--ink); }
+.vt-why { margin: 6px 0 0; padding-left: 20px; font-size: .92rem; }
+.vt-usual { margin: 0 0 12px; }
+.vt-usual summary { cursor: pointer; font-weight: 700; }
+.vt-usual ul { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 4px; }
+.vt-usual small { color: var(--muted); }

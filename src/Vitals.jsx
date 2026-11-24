@@ -62,6 +62,7 @@ export function Vitals({ me }) {
   const [overrides, setOverrides] = useState({}) // vital -> this resident's range row
   const [f, setF] = useState(blank)
   const [voidIt, setVoidIt] = useState(null)     // { id, reason }
+  const [ai, setAi] = useState(null)             // prototype AI notes: { map, baseline }
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [ok, setOk] = useState('')
@@ -87,8 +88,12 @@ export function Vitals({ me }) {
     if (v.error) { setErr(clean(v.error.message)); return }
     setRows(v.data)
     if (o.data) setOverrides(Object.fromEntries(o.data.map(r => [r.vital, r])))
+    // prototype AI notes are an extra: if they cannot load, the history still works
+    const a = await supabase.rpc('ai_vital_check', { p_resident: rid, p_days: 14 })
+    setAi(!a.error && Array.isArray(a.data?.readings)
+      ? { map: Object.fromEntries(a.data.readings.map(r => [r.vital_id, r])), baseline: a.data.baseline || [] } : null)
   }, [rid])
-  useEffect(() => { setRows([]); setOverrides({}); setVoidIt(null); setOk(''); setErr(''); load() }, [load])
+  useEffect(() => { setRows([]); setOverrides({}); setAi(null); setVoidIt(null); setOk(''); setErr(''); load() }, [load])
 
   const units = Object.fromEntries(Object.values(defaults).map(r => [r.vital, r.unit]))
   const range = k => {
@@ -183,6 +188,13 @@ export function Vitals({ me }) {
 
           <div className="card">
             <h2>History</h2>
+            {ai && ai.baseline.length > 0 && (
+              <details className="vt-usual">
+                <summary>Usual values for {res.find(r => r.id === rid)?.full_name} <span className="tag">Prototype</span></summary>
+                <ul>{ai.baseline.map(b => <li key={b.vital}><b>{b.label}</b> usually {b.usual} {b.unit}<small> (range {b.low} to {b.high})</small></li>)}</ul>
+                <p className="meta">Learned from this resident’s own last 30 days. “Unusual” notes come from a prototype trained on simulated data. They are a prompt to look, not a diagnosis.</p>
+              </details>
+            )}
             {rows.length === 0 && <p className="empty">No readings yet for this resident. Add the first one above.</p>}
             {rows.map(v => {
               const gone = !!v.voided_at
@@ -194,9 +206,11 @@ export function Vitals({ me }) {
                     <span className="meta">by {v.who?.full_name ?? 'a colleague'}</span>
                     {!gone && top === 'crit' && <span className="tag hot">Critical</span>}
                     {!gone && top === 'warn' && <span className="tag vt-warn">Out of range</span>}
+                    {!gone && ai?.map[v.id]?.unusual && <span className="tag vt-ai">Unusual for this resident</span>}
                     {gone && <span className="tag">Voided</span>}
                   </div>
                   <Chips v={v} units={units} />
+                  {!gone && ai?.map[v.id]?.unusual && <ul className="vt-why">{ai.map[v.id].reasons.map((t, i) => <li key={i}>{t}</li>)}</ul>}
                   {v.note && <p className="meta">Note: {v.note}</p>}
                   {gone && <p className="meta">Voided {fmt(v.voided_at)}{v.void_reason && `: ${v.void_reason}`}</p>}
                   {!gone && (voidIt?.id === v.id ? (

@@ -1,0 +1,24 @@
+/* Insights screen. Uses the app's theme variables (light + dark). */
+.in-proto { display: inline-block; vertical-align: middle; font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); }
+.in-summary { font-size: 1.05rem; margin: 0 0 12px; }
+.in-summary small { color: var(--muted); }
+.in-card.high { border-left: 6px solid var(--danger); }
+.in-card.elevated { border-left: 6px solid #e6a100; }
+.in-card.low { border-left: 6px solid var(--line); }
+.in-head { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 6px; }
+.in-band { font-size: .85rem; font-weight: 700; padding: 2px 10px; border-radius: 6px; border: 1px solid var(--line); }
+.in-band.high { background: color-mix(in srgb, var(--danger) 18%, var(--surface)); border-color: var(--danger); }
+.in-band.elevated { background: color-mix(in srgb, #e6a100 20%, var(--surface)); border-color: #e6a100; }
+.in-why { margin: 4px 0 12px; padding-left: 20px; }
+.in-why li { margin: 2px 0; }
+.in-detail { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.in-detail h3, .in-model h3 { font-size: 1rem; margin: 12px 0 6px; }
+.in-model h3 small { color: var(--muted); font-weight: 400; }
+.in-usual { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+.in-usual small { color: var(--muted); }
+.in-reading { padding: 8px 0; border-top: 1px solid var(--line); }
+.in-reading .in-why { margin-bottom: 0; }
+.in-note { color: var(--muted); font-size: .9rem; margin: 6px 0; }
+.in-about summary { cursor: pointer; font-weight: 700; }
+.in-about p { margin: 8px 0; }
