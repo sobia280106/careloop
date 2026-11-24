@@ -56,6 +56,22 @@
   --disabled-ink: #6B7A90;
   --menu-bg: #0B1020;                        /* native dropdown list */
 
+  /* Legacy names the other style files may still use, mapped to the glass palette */
+  --surface: var(--glass-bg);
+  --line: var(--glass-border-hover);
+  --accent: #2DD4BF;
+  --accent-bg: rgba(45, 212, 191, 0.14);
+  --danger: var(--red);
+  --danger-ink: #14040A;
+  --danger-bg: var(--red-bg);
+  --deco: var(--accent-to);
+  --warn: var(--amber);
+  --warn-bg: var(--amber-bg);
+  --nav-bg: var(--glass-bg);
+  --nav-ink: var(--ink);
+  --tab-ring: transparent;
+  --tab-hover: var(--glass-bg-hover);
+
   --ease: 150ms ease;
   color-scheme: dark;
 }
@@ -196,3 +212,16 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--accent-from); 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Selected / active toggle buttons (e.g. By resident / By time): same glowing gradient
+   as the active tab and the Given button, with dark text so they are always readable. */
+:root button[aria-pressed='true'], :root button[aria-selected='true'], :root button[aria-checked='true'],
+:root [role='tab'][aria-selected='true'], :root [role='radio'][aria-checked='true'],
+:root button.on, :root button.active, :root button.sel, :root button.selected,
+:root button.is-active, :root button.current {
+  background: var(--accent-grad) !important; color: var(--accent-ink) !important;
+  border-color: transparent !important; box-shadow: var(--accent-glow) !important;
+  font-weight: 600; filter: none; opacity: 1; }
+:root button[aria-pressed='true']:hover, :root button[aria-selected='true']:hover, :root button[aria-checked='true']:hover,
+:root button.on:hover, :root button.active:hover, :root button.sel:hover, :root button.selected:hover,
+:root button.is-active:hover, :root button.current:hover { box-shadow: var(--accent-glow-strong) !important; }
