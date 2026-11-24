@@ -4,6 +4,8 @@ import { MyDay, Meds } from './Doses.jsx'
 import { useAlerts, Bell, AlertsPage, Floor, Cover } from './Alerts.jsx'
 import { usePending, Approvals } from './Changes.jsx'
 import { Vitals } from './Vitals.jsx'
+import { Dashboard } from './Dashboard.jsx'
+import { Insights } from './Insights.jsx'
 
 const IDLE_MS = 15 * 60 * 1000 // auto-logout after 15 minutes of no activity
 const ROLE_LABEL = { admin: 'Admin', supervisor: 'Supervisor', caregiver: 'Caregiver' }
@@ -51,7 +53,7 @@ export default function App() {
 
   const lead = me.role === 'admin' || me.role === 'supervisor'
   const tabs = [
-    ['myday', 'My day'], ['residents', 'Residents'], ['meds', 'Medications'], ['vitals', 'Vitals'],
+    ['myday', 'My day'], ['dashboard', 'Dashboard'], ['residents', 'Residents'], ['meds', 'Medications'], ['vitals', 'Vitals'], ['insights', 'Insights'],
     ...(lead ? [['floor', 'Floor'], ['approvals', pending.count ? `Approvals (${pending.count})` : 'Approvals'], ['cover', 'Cover']] : []),
     ...(me.role === 'admin' ? [['staff', 'Staff']] : []),
   ]
@@ -72,9 +74,11 @@ export default function App() {
         <button className="btn quiet" onClick={() => supabase.auth.signOut()}>Sign out</button>
       </header>
       <main>{shownTab === 'myday' ? <MyDay me={me} />
+        : shownTab === 'dashboard' ? <Dashboard me={me} go={setTab} />
         : shownTab === 'residents' ? <Residents me={me} />
         : shownTab === 'meds' ? <Meds me={me} />
         : shownTab === 'vitals' ? <Vitals me={me} />
+        : shownTab === 'insights' ? <Insights me={me} />
         : shownTab === 'alerts' ? <AlertsPage me={me} alerts={alerts} />
         : shownTab === 'floor' ? <Floor me={me} alerts={alerts} />
         : shownTab === 'approvals' ? <Approvals me={me} onChange={pending.reload} />
