@@ -1,4 +1,4 @@
-/* CareLoop theme. Light = green palette, dark = purple palette (follows the device setting). */
+/* CareLoop theme. Light mode only (green palette). */
 :root {
   --bg: #F7F4D5;            /* page: beige */
   --surface: #FCFAE6;       /* cards: a lighter tint of the beige */
@@ -21,17 +21,6 @@
   --warn-bg: color-mix(in srgb, var(--warn) 30%, var(--surface));
   --danger-bg: color-mix(in srgb, var(--danger) 14%, var(--surface));
   color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #16131F; --surface: #4A3F4B; --ink: #F0D9E4; --muted: #C1A0AC; --line: #806C79;
-    --accent: #C1A0AC; --accent-ink: #16131F; --danger: #FFA39C; --danger-ink: #16131F;
-    --deco: #C1A0AC; --warn: #D3968C;
-    --nav-bg: #4A3F4B; --nav-ink: #F0D9E4; --tab-ring: transparent;
-    --tab-hover: color-mix(in srgb, #C1A0AC 25%, #4A3F4B);
-    --disabled-bg: #806C79; --disabled-ink: #16131F;
-    color-scheme: dark;
-  }
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink);
