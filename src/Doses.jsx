@@ -188,7 +188,7 @@ export function Meds({ me }) {
   return (
     <>
       <h1>Medications</h1>
-      <p className="sub">{isAdmin ? 'Add medications and times for a resident. Changes you make apply at once.' : 'Medications for your residents. Ask for a change and a supervisor or admin will decide.'}</p>
+      <p className="sub">{isAdmin ? 'Add medications and times for a resident. Changes you make apply at once.' : me.role === 'supervisor' ? 'Ask for a change or a new medication. Someone else decides, and only an admin can approve stopping or adding a medication.' : 'Medications for your residents. Ask for a change and a supervisor or admin will decide.'}</p>
       {err && <p className="err" role="alert">{err}</p>}
       {ok && <p className="ok" role="status">{ok}</p>}
       <p><label>Resident{' '}

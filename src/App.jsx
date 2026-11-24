@@ -150,7 +150,7 @@ function Residents({ me }) {
   return (
     <>
       <h1>Residents</h1>
-      <p className="sub">{isAdmin || me.role === 'supervisor' ? 'All residents.' : 'Residents assigned to you or under your cover.'}</p>
+      <p className="sub">{isAdmin ? 'All residents.' : me.role === 'supervisor' ? 'All residents. Only an admin can add residents or change who looks after them.' : 'Residents assigned to you or under your cover.'}</p>
       {err && <p className="err" role="alert">{err}</p>}
 
       {isAdmin && (

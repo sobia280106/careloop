@@ -49,3 +49,11 @@ button.db-tile:hover { border-color: var(--accent); }
 .db-row.audit pre { margin: 6px 0 0; padding: 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
   overflow-x: auto; font-size: .8rem; white-space: pre-wrap; word-break: break-word; }
 .db-filter { margin: 0 0 12px; }
+
+/* role card */
+.db-role summary { cursor: pointer; }
+.db-role summary span { color: var(--muted); font-size: .9rem; margin-left: 8px; }
+.db-role-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px 24px; margin-top: 8px; }
+.db-role h3 { font-size: 1rem; margin: 8px 0 4px; }
+.db-role ul { margin: 0; padding-left: 20px; }
+.db-role li { margin: 3px 0; }

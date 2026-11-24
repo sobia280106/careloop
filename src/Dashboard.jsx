@@ -281,6 +281,40 @@ function Audit() {
   )
 }
 
+
+/* ---------- what this role can and cannot do ---------- */
+const ROLE_INFO = {
+  caregiver: {
+    title: 'Caregiver',
+    can: ['Record doses and vitals for your residents, and for residents handed over to you', 'Request medication changes and new medications', 'See the alerts meant for you'],
+    cannot: ['Decide any request', 'Arrange cover', 'See other caregivers’ residents'],
+  },
+  supervisor: {
+    title: 'Supervisor',
+    can: ['See every resident and the whole floor', 'Get alerts first and take them with “I’m on it”', 'Decide time, dose, pause and resume requests from others', 'Arrange cover', 'Set normal ranges for one resident'],
+    cannot: ['Decide your own requests', 'Decide stop or add requests (admin only)', 'Add or change medications directly', 'Change the default vital ranges', 'Add residents, manage accounts or see the audit log'],
+  },
+  admin: {
+    title: 'Admin',
+    can: ['Everything a supervisor can do', 'Decide stop and add requests', 'Add and change medications directly; changes apply at once and are logged', 'Edit the default vital ranges, add residents and assign caregivers', 'Manage accounts and roles', 'See team workload and the audit log'],
+    cannot: ['Nothing is blocked, but every change is logged'],
+  },
+}
+function RoleCard({ role }) {
+  const r = ROLE_INFO[role]
+  if (!r) return null
+  return (
+    <details className="card db-role">
+      <summary>Your role: <b>{r.title}</b> <span>What you can and cannot do</span></summary>
+      <div className="db-role-cols">
+        <div><h3>You can</h3><ul>{r.can.map(t => <li key={t}>{t}</li>)}</ul></div>
+        <div><h3>{role === 'admin' ? 'Limits' : 'You cannot'}</h3><ul>{r.cannot.map(t => <li key={t}>{t}</li>)}</ul></div>
+      </div>
+      {role !== 'caregiver' && <p className="db-note">Alerts go to supervisors first. If nobody claims one within 30 minutes, it goes to the admin.</p>}
+    </details>
+  )
+}
+
 /* ---------- the Dashboard tab ---------- */
 export function Dashboard({ me, go }) {
   const lead = isLead(me)
@@ -293,6 +327,7 @@ export function Dashboard({ me, go }) {
       <h1>Dashboard</h1>
       <p className="sub">{admin ? 'The whole care home at a glance.' : lead ? 'What needs attention, and how doses are going.' : 'How today is going for your residents.'}</p>
 
+      <RoleCard role={me.role} />
       {lead ? <Attention go={go} /> : <MyToday />}
 
       <div className="db-toolbar">
