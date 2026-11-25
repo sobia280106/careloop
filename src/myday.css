@@ -1,5 +1,5 @@
 /* My day: grouping by resident. Uses the app's theme variables. */
 .md-seg { display: flex; gap: 8px; margin: 0 0 8px; flex-wrap: wrap; }
-.md-seg .btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.md-seg .btn[aria-pressed="true"] { background: var(--accent-fill); color: var(--accent-ink); border-color: transparent; box-shadow: var(--accent-glow); }
 .reshead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; margin: 24px 0 8px; font-size: 1.15rem; }
 .reshead span { color: var(--muted); font-size: .9rem; font-weight: 400; }

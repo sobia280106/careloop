@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import './doses.css'
 import './myday.css'
@@ -127,7 +127,8 @@ export function MyDay({ me }) {
   })()
   const summary = c => {
     const other = Object.entries(c).filter(([s]) => !['pending', 'missed', 'given'].includes(s)).reduce((n, [, v]) => n + v, 0)
-    return [c.pending && `${c.pending} due`, c.missed && `${c.missed} missed`, c.given && `${c.given} given`, other && `${other} other`].filter(Boolean).join(' · ')
+    const parts = [c.pending && ['due', `${c.pending} due`], c.missed && ['miss', `${c.missed} missed`], c.given && ['given', `${c.given} given`], other && ['other', `${other} other`]].filter(Boolean)
+    return parts.map(([k, t], i) => <Fragment key={k}>{i > 0 && ' · '}<span className={k === 'miss' ? 'miss' : undefined}>{t}</span></Fragment>)
   }
 
   let prev = ''

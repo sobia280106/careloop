@@ -1,19 +1,21 @@
 /* Dashboard screens. Uses the app's theme variables (light + dark). */
 .db-toolbar { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; margin: 8px 0 20px; }
 .db-seg { display: flex; gap: 8px; flex-wrap: wrap; }
-.db-seg .btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.db-seg .btn[aria-pressed="true"] { background: var(--accent-fill); color: var(--accent-ink); border-color: transparent; box-shadow: var(--accent-glow); }
 section > h2, .card h2 { font-size: 1.15rem; margin: 0 0 12px; }
 
 .db-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 12px; }
-.db-tile { display: grid; gap: 2px; text-align: left; align-content: start; background: var(--surface); border: 1px solid var(--line);
-  border-radius: 10px; padding: 14px; color: var(--ink); font: inherit; }
+.db-tile { display: grid; gap: 2px; text-align: left; align-content: start; background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: 16px; padding: 14px; color: var(--ink); font: inherit; box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%);
+  transition: background-color .15s, border-color .15s; }
 button.db-tile { cursor: pointer; }
-button.db-tile:hover { border-color: var(--accent); }
+button.db-tile:hover { background: var(--glass-bg-hover); border-color: var(--glass-border-hover); }
 .db-tile b { font-size: 1.9rem; line-height: 1.1; }
 .db-tile span { color: var(--muted); font-size: .9rem; }
 .db-tile small { color: var(--muted); font-size: .8rem; }
-.db-tile.hot { border-color: var(--danger); }
-.db-tile.hot b { color: var(--danger); }
+html:root .db-tile.hot { border-color: var(--crit); box-shadow: var(--glass-shadow), var(--crit-glow-lo); }
+.db-tile.hot b { color: var(--crit-ink); text-shadow: var(--crit-text-glow); }
 .db-note { color: var(--muted); font-size: .9rem; margin: 8px 0 0; }
 
 .db-big { margin: 0 0 12px; }
@@ -21,16 +23,16 @@ button.db-tile:hover { border-color: var(--accent); }
 .db-big span { color: var(--muted); }
 .db-bar { display: flex; height: 18px; border-radius: 9px; overflow: hidden; background: var(--line); gap: 2px; }
 .seg { display: inline-block; }
-.seg.given { background: var(--accent); }
-.seg.refused { background: #e6a100; }
-.seg.missed { background: var(--danger); }
+.seg.given { background: var(--ok); }
+.seg.refused { background: var(--warn); }
+.seg.missed { background: var(--crit); }
 .seg.not_available { background: var(--muted); }
 .db-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 0; margin: 10px 0 0; font-size: .92rem; }
 .db-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
 
 .db-chart { width: 100%; height: auto; display: block; }
 .db-chart .axis { stroke: var(--line); stroke-width: 1; }
-.db-chart .bar { fill: var(--accent); }
+.db-chart .bar { fill: var(--deco); }
 .db-chart .bar.none { fill: var(--line); }
 .db-chart .val { fill: var(--ink); font-size: 11px; }
 .db-chart .lab { fill: var(--muted); font-size: 10px; }
@@ -40,7 +42,7 @@ button.db-tile:hover { border-color: var(--accent); }
 .db-row .name { font-weight: 700; flex: 1 1 170px; }
 .db-row .name small { font-weight: 400; color: var(--muted); }
 .db-row .mini { flex: 1 1 90px; height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; max-width: 160px; }
-.db-row .mini i { display: block; height: 100%; background: var(--accent); }
+.db-row .mini i { display: block; height: 100%; background: var(--deco); }
 .db-row b { min-width: 3.2rem; text-align: right; }
 .db-row .meta { color: var(--muted); flex: 1 1 200px; font-size: .92rem; }
 .db-row.audit .when { flex: 0 0 8.5rem; }
