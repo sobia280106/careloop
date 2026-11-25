@@ -7,6 +7,7 @@ import { Vitals } from './Vitals.jsx'
 import { Dashboard } from './Dashboard.jsx'
 import { Insights } from './Insights.jsx'
 import { ThemeToggle } from './Theme.jsx'
+import { InstallButton } from './Pwa.jsx'
 
 const IDLE_MS = 15 * 60 * 1000 // auto-logout after 15 minutes of no activity
 const ROLE_LABEL = { admin: 'Admin', supervisor: 'Supervisor', caregiver: 'Caregiver' }
@@ -75,6 +76,7 @@ export default function App() {
         </nav>
         <Bell count={alerts.count} critical={alerts.critical} active={shownTab === 'alerts'} onClick={() => setTab('alerts')} />
         <span className="who">{me.full_name} ({ROLE_LABEL[me.role]})</span>
+        <InstallButton />
         <ThemeToggle />
         <button className="btn quiet" onClick={() => supabase.auth.signOut()}>Sign out</button>
       </header>
@@ -107,7 +109,7 @@ function Login() {
   }
   return (
     <div className="login">
-      <div className="theme-float"><ThemeToggle /></div>
+      <div className="theme-float"><InstallButton /> <ThemeToggle /></div>
       <h1>CareLoop</h1>
       <p className="sub">Sign in with the account your administrator created.</p>
       <form className="card" onSubmit={submit}>
