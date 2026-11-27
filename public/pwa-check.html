@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CareLoop install check</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<style>
+ :root{color-scheme:light dark}
+ body{font:16px/1.45 system-ui,sans-serif;max-width:40rem;margin:0 auto;padding:16px}
+ h1{font-size:1.3rem;margin:0 0 4px} p.s{margin:0 0 14px;opacity:.75}
+ .r{display:flex;gap:10px;padding:9px 0;border-top:1px solid #8884}
+ .i{flex:0 0 1.6rem;font-weight:700} .ok .i{color:#1a7f37} .no .i{color:#cf222e} .wait .i{color:#9a6700}
+ .t{font-weight:600} .d{opacity:.75;font-size:.88rem;word-break:break-all}
+ button{font:inherit;padding:10px 16px;border-radius:10px;border:0;background:#105666;color:#fff;margin:12px 0}
+ #sum{font-weight:700;margin:14px 0}
+</style></head><body>
+<h1>CareLoop install check</h1><p class="s">Take a screenshot of this whole page and send it. It only reads information.</p>
+<div id="sum">Checking...</div><div id="out"></div><button id="inst" hidden>Install now</button>
+<script>
+(function () {
+  var out = document.getElementById('out'), n = 0, bad = 0;
+  function row(state, title, detail) {
+    var d = document.createElement('div'); d.className = 'r ' + state; d.dataset.state = state;
+    d.innerHTML = '<span class="i">' + (state === 'ok' ? 'OK' : state === 'no' ? 'NO' : '..') + '</span><span><span class="t"></span><br><span class="d"></span></span>';
+    d.querySelector('.t').textContent = title; d.querySelector('.d').textContent = detail || ''; out.appendChild(d); n++; if (state === 'no') bad++;
+    return d;
+  }
+  var get = function (u) { return fetch(u, { cache: 'no-store' }); };
+  function pngSize(buf) { var v = new DataView(buf); return (v.getUint32(0) === 0x89504e47) ? [v.getUint32(16), v.getUint32(20)] : null; }
+  var offer = null;
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); offer = e; var b = document.getElementById('inst'); b.hidden = false; b.onclick = function () { offer.prompt(); }; });
+
+  async function run() {
+    row(window.isSecureContext ? 'ok' : 'no', 'Page is served securely (https)', location.origin);
+    row('ok', 'Browser', (navigator.userAgent.match(/(Chrome|CriOS|SamsungBrowser|Firefox|Edg)\/[\d.]+/) || ['unknown'])[0] + (window.matchMedia('(display-mode: standalone)').matches ? ' | already running as an installed app' : ''));
+    try {
+      var home = await (await get('/')).text();
+      row(/rel=["']manifest["']/i.test(home) ? 'ok' : 'no', 'Home page points to the install file (manifest)', /rel=["']manifest["']/i.test(home) ? 'found in index.html' : 'NOT found: the new index.html is not live yet');
+      var m = home.match(/src="(\/assets\/[^"]+\.js)"/);
+      if (m) {
+        var js = await (await get(m[1])).text();
+        row(js.indexOf('beforeinstallprompt') > -1 ? 'ok' : 'no', 'Latest app code (Install button) is live', m[1]);
+        row(js.indexOf('careloop-theme') > -1 ? 'ok' : 'no', 'Theme code is live', '');
+      } else row('no', 'Could not find the app script on the home page', '');
+    } catch (e) { row('no', 'Could not read the home page', String(e)); }
+    var mf = null;
+    try {
+      var r = await get('/manifest.webmanifest'); var ct = r.headers.get('content-type') || '';
+      mf = await r.json();
+      row('ok', 'Manifest loads and is valid JSON', 'content-type: ' + ct);
+      row(mf.name && mf.start_url && mf.display === 'standalone' ? 'ok' : 'no', 'Manifest has name, start_url and display=standalone', 'name=' + mf.name + ' start=' + mf.start_url + ' display=' + mf.display);
+      var icons = mf.icons || [];
+      for (var i = 0; i < icons.length; i++) {
+        var ic = icons[i];
+        try {
+          var ir = await get(ic.src); var ict = ir.headers.get('content-type') || ''; var sz = pngSize(await ir.arrayBuffer());
+          row(ir.ok && sz && sz[0] === parseInt(ic.sizes) ? 'ok' : 'no', 'Icon ' + ic.src + ' (' + (ic.purpose || 'any') + ')', 'declared ' + ic.sizes + ', real ' + (sz ? sz.join('x') : 'NOT a png') + ', ' + ict);
+        } catch (e) { row('no', 'Icon ' + ic.src + ' failed to load', String(e)); }
+      }
+    } catch (e) { row('no', 'Manifest could not be read', String(e)); }
+    try {
+      var sr = await get('/sw.js'); var st = await sr.text();
+      row(sr.ok && /addEventListener\(\s*['"]fetch['"]/.test(st) ? 'ok' : 'no', 'Service worker file has a fetch handler', 'content-type: ' + (sr.headers.get('content-type') || ''));
+    } catch (e) { row('no', 'Service worker file could not be read', String(e)); }
+    if ('serviceWorker' in navigator) {
+      try {
+        await navigator.serviceWorker.register('/sw.js'); await navigator.serviceWorker.ready;
+        var regs = await navigator.serviceWorker.getRegistrations();
+        row(regs.length ? 'ok' : 'no', 'Service worker is registered for this site', regs.map(function (g) { return g.scope + (g.active ? ' (active)' : ' (not active)'); }).join(' '));
+      } catch (e) { row('no', 'Service worker could not register', String(e)); }
+    } else row('no', 'This browser has no service worker support', '');
+    var w = row('wait', 'Does Chrome offer to install?', 'waiting up to 8 seconds...');
+    await new Promise(function (res) { var t = 0; var iv = setInterval(function () { if (offer || ++t > 16) { clearInterval(iv); res(); } }, 500); });
+    out.removeChild(w); n--;
+    row(offer ? 'ok' : 'no', 'Chrome says this can be installed', offer ? 'yes: press "Install now" below' : 'no install offer was made. If everything above is OK, close Chrome fully, reopen and run this page again');
+    document.getElementById('sum').textContent = bad === 0 ? 'Everything checks out.' : bad + ' problem' + (bad > 1 ? 's' : '') + ' found (marked NO).';
+  }
+  run().catch(function (e) { row('no', 'Check crashed', String(e)); });
+})();
+</script></body></html>
